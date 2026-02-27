@@ -7,6 +7,7 @@ import { MarkdownView } from "obsidian";
 import { FilterView, VIEW_TYPE_FILTER } from "./filterView";
 import { ChatView, VIEW_TYPE_CHAT } from "./chatView";
 import { SergejsSettingTab } from "./settingsTab";
+import { generateTextWithOllama } from "./ollama";
 
 interface SergejsAISettings {
     chatModel: string;
@@ -220,13 +221,11 @@ export default class SergejsResearchAI extends Plugin {
 
                 new Notice("Generating tag suggestions...");
 
-                const response = await fetch("http://localhost:11434/api/generate", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        model: this.settings.chatModel,
-                        stream: false,
-                        prompt: `
+                let generatedTags = "";
+                try {
+                    generatedTags = await generateTextWithOllama(
+                        this.settings.chatModel,
+                        `
 You are a research assistant in radiation oncology.
 
 Extract 5–8 concise lowercase tags for the following note.
@@ -237,17 +236,14 @@ Return ONLY comma-separated tags.
 Note:
 ${content}
 `
-                    })
-                });
-
-                const data = await response.json();
-
-                if (!data.response) {
-                    new Notice("Tag generation failed.");
+                    );
+                } catch (error) {
+                    console.error("Tag generation failed:", error);
+                    new Notice("Tag generation failed. Make sure Ollama is running.");
                     return;
                 }
 
-                const rawTags = data.response
+                const rawTags = generatedTags
                     .split(",")
                     .map((t: string) => t.trim().toLowerCase())
                     .filter((t: string) => t.length > 2);
@@ -293,13 +289,10 @@ ${content}
                 const text = editor.getValue();
                 new Notice("Analyzing with local AI...");
 
-                const response = await fetch("http://localhost:11434/api/generate", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        model: this.settings.chatModel,
-                        stream: false,
-                        prompt: `
+                try {
+                    const analysis = await generateTextWithOllama(
+                        this.settings.insightModel,
+                        `
 You are a research assistant in radiation oncology.
 
 Analyze the following note:
@@ -313,14 +306,15 @@ Return structured output:
 3. Suggested tags (short)
 4. Possible research extensions
 `
-                    })
-                });
+                    );
 
-                const data = await response.json();
-
-                editor.replaceSelection(
-                    "\n\n## 🧠 AI Research Analysis\n\n" + data.response
-                );
+                    editor.replaceSelection(
+                        "\n\n## 🧠 AI Research Analysis\n\n" + analysis
+                    );
+                } catch (error) {
+                    console.error("Research analysis failed:", error);
+                    new Notice("Analysis failed. Make sure Ollama is running.");
+                }
             }
         });
 
