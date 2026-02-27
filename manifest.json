@@ -1,0 +1,10 @@
+{
+  "id": "sergejs-research-ai",
+  "name": "Sergejs Research AI",
+  "version": "0.0.1",
+  "minAppVersion": "1.5.0",
+  "description": "Local AI-powered research assistant with semantic vault intelligence.",
+  "author": "Sergejs Unterkirhers",
+  "authorUrl": "https://www.linkedin.com/in/sergejs-unterkirhers-722b871a4/",
+  "isDesktopOnly": true
+}
